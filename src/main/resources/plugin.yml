@@ -1,0 +1,22 @@
+name: ${name}
+version: ${version}
+main: io.github.phateio.honeypot.Honeypot
+api-version: "1.21"
+author: shikendon
+description: A Paper plugin for catching griefers with honeypot blocks.
+commands:
+  honeypot:
+    aliases: [hp]
+    description: Manage honeypot blocks and regions.
+    permission: honeypot.create
+    usage: "/hp [pos1|pos2|region|regions|delregion|save|reload]"
+permissions:
+  honeypot.create:
+    description: Manage honeypots (command and selection mode).
+    default: op
+  honeypot.break:
+    description: Break honeypot blocks without penalty (removes the mark).
+    default: op
+  honeypot.place:
+    description: Place blocks inside honeypots without being recorded.
+    default: op
