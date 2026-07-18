@@ -1,0 +1,39 @@
+# What happens when a player trips the honeypot: ban | kick | none.
+action: ban
+broadcast: true
+
+banReason: Destroyed honeypot block.
+kickMessage: '[Honeypot] You have been caught destroying a honeypot block.'
+banSource: '[Honeypot]'
+broadcastMessage: '<dark_red>[Honeypot]<gray> Player <dark_red><player><gray> was caught breaking a honeypot block.'
+
+# Non-empty lists override the built-in ban/kick API with console commands.
+# Placeholders: %player%, %reason%
+banCommands: []
+kickCommands: []
+
+# Total points required to trip the honeypot; blocks not in the map are 1 point.
+offensePoints: 32
+offensePointMap:
+  GLASS: 5
+  WHITE_WOOL: 5
+  ORANGE_WOOL: 5
+  MAGENTA_WOOL: 5
+  LIGHT_BLUE_WOOL: 5
+  YELLOW_WOOL: 5
+  LIME_WOOL: 5
+  PINK_WOOL: 5
+  GRAY_WOOL: 5
+  LIGHT_GRAY_WOOL: 5
+  CYAN_WOOL: 5
+  PURPLE_WOOL: 5
+  BLUE_WOOL: 5
+  BROWN_WOOL: 5
+  GREEN_WOOL: 5
+  RED_WOOL: 5
+  BLACK_WOOL: 5
+  EMERALD_BLOCK: 5
+  PRISMARINE: 3
+
+# Also append catches to plugins/<PluginName>/honeypot.log
+logToFile: true
