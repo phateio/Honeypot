@@ -1,5 +1,6 @@
 package io.github.phateio.honeypot;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -17,7 +18,7 @@ public final class HoneypotCommand implements TabExecutor {
 
     private static final String PREFIX = "§6[Honeypot] §f";
     private static final List<String> SUB_COMMANDS =
-            List.of("pos1", "pos2", "region", "regions", "delregion", "save", "reload");
+            List.of("pos1", "pos2", "create", "region", "list", "delete", "save", "reload");
 
     private final Honeypot plugin;
     private final Map<UUID, BlockPos> pos1 = new HashMap<>();
@@ -36,16 +37,18 @@ public final class HoneypotCommand implements TabExecutor {
             }
             boolean selecting = plugin.toggleSelecting(player.getUniqueId());
             player.sendMessage(PREFIX + (selecting
-                    ? "selection mode on: right-click blocks with an empty main hand to mark them."
+                    ? "selection mode on: right-click blocks with an empty main hand to mark them into '"
+                            + plugin.activePot(player.getUniqueId()) + "'."
                     : "selection mode off."));
             return true;
         }
         switch (args[0].toLowerCase(Locale.ROOT)) {
             case "pos1" -> setCorner(sender, args, pos1, "pos1");
             case "pos2" -> setCorner(sender, args, pos2, "pos2");
+            case "create" -> create(sender, args);
             case "region" -> createRegion(sender);
-            case "regions" -> listRegions(sender);
-            case "delregion" -> deleteRegion(sender, args);
+            case "list" -> list(sender, args);
+            case "delete" -> delete(sender, args);
             case "save" -> {
                 plugin.registry().save();
                 sender.sendMessage(PREFIX + "honeypot data saved.");
@@ -57,6 +60,25 @@ public final class HoneypotCommand implements TabExecutor {
             default -> sender.sendMessage("§cusage: " + command.getUsage());
         }
         return true;
+    }
+
+    private void create(CommandSender sender, String[] args) {
+        if (!(sender instanceof Player player)) {
+            sender.sendMessage("§cplayers only.");
+            return;
+        }
+        if (args.length != 2) {
+            sender.sendMessage("§cusage: /hp create <name>");
+            return;
+        }
+        String name = args[1];
+        plugin.setActivePot(player.getUniqueId(), name);
+        if (!plugin.isSelecting(player.getUniqueId())) {
+            plugin.toggleSelecting(player.getUniqueId());
+        }
+        Pot existing = plugin.registry().pot(name);
+        sender.sendMessage(PREFIX + (existing == null ? "now marking into new honeypot '" : "now marking into '")
+                + name + "': right-click blocks or set pos1/pos2 and /hp region.");
     }
 
     private void setCorner(CommandSender sender, String[] args, Map<UUID, BlockPos> store, String name) {
@@ -104,41 +126,71 @@ public final class HoneypotCommand implements TabExecutor {
             sender.sendMessage("§cpos1 and pos2 must be in the same world.");
             return;
         }
-        plugin.registry().addRegion(new Region(a.world(), a.x(), a.y(), a.z(), b.x(), b.y(), b.z()));
-        List<Region> regions = plugin.registry().regions();
-        sender.sendMessage(PREFIX + "region #" + regions.size() + " created: "
-                + describe(regions.getLast()));
+        String potName = plugin.activePot(player.getUniqueId());
+        plugin.registry().addRegion(potName, new Region(a.world(), a.x(), a.y(), a.z(), b.x(), b.y(), b.z()));
+        Pot pot = plugin.registry().pot(potName);
+        sender.sendMessage(PREFIX + "added region #" + pot.regions().size() + " to '" + potName + "': "
+                + describe(pot.regions().getLast()));
     }
 
-    private void listRegions(CommandSender sender) {
-        List<Region> regions = plugin.registry().regions();
-        if (regions.isEmpty()) {
-            sender.sendMessage(PREFIX + "no regions.");
+    private void list(CommandSender sender, String[] args) {
+        if (args.length >= 2) {
+            listOne(sender, args[1]);
             return;
         }
-        sender.sendMessage(PREFIX + regions.size() + " region(s):");
-        for (int i = 0; i < regions.size(); i++) {
-            sender.sendMessage("§f" + (i + 1) + ". " + describe(regions.get(i)));
+        var pots = plugin.registry().pots();
+        if (pots.isEmpty()) {
+            sender.sendMessage(PREFIX + "no honeypots.");
+            return;
+        }
+        sender.sendMessage(PREFIX + pots.size() + " honeypot(s):");
+        for (Pot pot : pots) {
+            sender.sendMessage("§f- " + pot.name() + ": " + pot.regions().size() + " region(s), "
+                    + pot.blocks().size() + " block(s)");
         }
     }
 
-    private void deleteRegion(CommandSender sender, String[] args) {
+    private void listOne(CommandSender sender, String name) {
+        Pot pot = plugin.registry().pot(name);
+        if (pot == null) {
+            sender.sendMessage("§cno honeypot named '" + name + "'.");
+            return;
+        }
+        sender.sendMessage(PREFIX + "'" + name + "': " + pot.regions().size() + " region(s), "
+                + pot.blocks().size() + " block(s)");
+        List<Region> regions = pot.regions();
+        for (int i = 0; i < regions.size(); i++) {
+            sender.sendMessage("§f  R" + (i + 1) + ". " + describe(regions.get(i)));
+        }
+        for (BlockPos block : pot.blocks()) {
+            sender.sendMessage("§f  B. " + block.serialize());
+        }
+    }
+
+    private void delete(CommandSender sender, String[] args) {
+        if (args.length < 2) {
+            sender.sendMessage("§cusage: /hp delete <name> [region-number]");
+            return;
+        }
+        String name = args[1];
+        if (args.length == 2) {
+            Pot removed = plugin.registry().deletePot(name);
+            sender.sendMessage(removed == null
+                    ? "§cno honeypot named '" + name + "'."
+                    : PREFIX + "deleted honeypot '" + name + "'.");
+            return;
+        }
         int index;
         try {
-            index = args.length == 2 ? Integer.parseInt(args[1]) : 0;
+            index = Integer.parseInt(args[2]);
         } catch (NumberFormatException e) {
-            index = 0;
-        }
-        if (index < 1) {
-            sender.sendMessage("§cusage: /hp delregion <number> (see /hp regions)");
+            sender.sendMessage("§cregion number must be an integer.");
             return;
         }
-        Region removed = plugin.registry().removeRegion(index - 1);
-        if (removed == null) {
-            sender.sendMessage("§cno region #" + index + ".");
-        } else {
-            sender.sendMessage(PREFIX + "region #" + index + " deleted: " + describe(removed));
-        }
+        Region removed = plugin.registry().deleteRegion(name, index - 1);
+        sender.sendMessage(removed == null
+                ? "§cno region #" + index + " in '" + name + "' (see /hp list " + name + ")."
+                : PREFIX + "deleted region #" + index + " from '" + name + "': " + describe(removed));
     }
 
     private static String describe(Region region) {
@@ -164,12 +216,27 @@ public final class HoneypotCommand implements TabExecutor {
             };
             return List.of(String.valueOf(coordinate));
         }
-        if (sub.equals("delregion") && args.length == 2) {
-            return IntStream.rangeClosed(1, plugin.registry().regions().size())
+        if ((sub.equals("create") || sub.equals("list") || sub.equals("delete")) && args.length == 2) {
+            return potNames(args[1]);
+        }
+        if (sub.equals("delete") && args.length == 3) {
+            Pot pot = plugin.registry().pot(args[1]);
+            int count = pot == null ? 0 : pot.regions().size();
+            return IntStream.rangeClosed(1, count)
                     .mapToObj(String::valueOf)
-                    .filter(number -> number.startsWith(args[1]))
+                    .filter(number -> number.startsWith(args[2]))
                     .toList();
         }
         return List.of();
+    }
+
+    private List<String> potNames(String prefix) {
+        List<String> names = new ArrayList<>();
+        for (Pot pot : plugin.registry().pots()) {
+            if (pot.name().toLowerCase(Locale.ROOT).startsWith(prefix.toLowerCase(Locale.ROOT))) {
+                names.add(pot.name());
+            }
+        }
+        return names;
     }
 }

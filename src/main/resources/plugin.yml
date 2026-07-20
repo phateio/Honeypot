@@ -9,7 +9,7 @@ commands:
     aliases: [hp]
     description: Manage honeypot blocks and regions.
     permission: honeypot.create
-    usage: "/hp [pos1|pos2|region|regions|delregion|save|reload]"
+    usage: "/hp [create|pos1|pos2|region|list|delete|save|reload]"
 permissions:
   honeypot.create:
     description: Manage honeypots (command and selection mode).

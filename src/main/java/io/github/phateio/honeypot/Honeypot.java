@@ -7,7 +7,9 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
@@ -26,6 +28,7 @@ public final class Honeypot extends JavaPlugin {
     private static final long SWEEP_PERIOD_TICKS = 1200;
 
     private final Set<UUID> selecting = new HashSet<>();
+    private final Map<UUID, String> activePot = new HashMap<>();
     private HoneypotConfig settings;
     private PotRegistry registry;
     private OffenseTracker tracker;
@@ -89,6 +92,16 @@ public final class Honeypot extends JavaPlugin {
 
     public void clearSelecting(UUID player) {
         selecting.remove(player);
+        activePot.remove(player);
+    }
+
+    /** The pot new marks and regions go into for this player (default bucket if unset). */
+    public String activePot(UUID player) {
+        return activePot.getOrDefault(player, PotRegistry.DEFAULT_POT);
+    }
+
+    public void setActivePot(UUID player, String name) {
+        activePot.put(player, name);
     }
 
     /** @return the new state: true if selection mode is now on */

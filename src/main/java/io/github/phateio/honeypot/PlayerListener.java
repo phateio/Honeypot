@@ -43,8 +43,10 @@ public final class PlayerListener implements Listener {
         }
         event.setCancelled(true);
         BlockPos pos = BlockPos.of(block);
-        if (plugin.registry().addBlock(pos)) {
-            player.sendMessage("§6[Honeypot] §fmarked " + block.getType() + " at " + pos.serialize());
+        String potName = plugin.activePot(player.getUniqueId());
+        if (plugin.registry().addBlock(potName, pos)) {
+            player.sendMessage("§6[Honeypot] §fmarked " + block.getType() + " at " + pos.serialize()
+                    + " in '" + potName + "'");
         } else {
             player.sendMessage("§6[Honeypot] §falready marked: " + pos.serialize());
         }

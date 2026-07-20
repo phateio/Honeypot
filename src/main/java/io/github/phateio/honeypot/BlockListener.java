@@ -31,9 +31,10 @@ public final class BlockListener implements Listener {
         if (player.hasPermission("honeypot.break")) {
             // Immune; breaking an individually marked block removes the mark.
             // Blocks only covered by a region break normally (regions are
-            // managed with /hp delregion).
-            if (registry.removeBlock(pos)) {
-                player.sendMessage("§6[Honeypot] §fmark removed: " + pos.serialize());
+            // managed with /hp delete).
+            String potName = registry.removeBlock(pos);
+            if (potName != null) {
+                player.sendMessage("§6[Honeypot] §fmark removed from '" + potName + "': " + pos.serialize());
             }
             return;
         }
