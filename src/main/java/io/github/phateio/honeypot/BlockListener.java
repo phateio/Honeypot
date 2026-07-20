@@ -41,15 +41,16 @@ public final class BlockListener implements Listener {
         OffenseTracker tracker = plugin.tracker();
         int total = tracker.recordBreak(player.getUniqueId(), pos, block.getState(),
                 config.pointsFor(block.getType()));
-        plugin.logEvent(player.getName() + " broke honeypot block " + block.getType()
+        plugin.logAlert(player.getName() + " broke honeypot block " + block.getType()
                 + " at " + pos.serialize() + " (" + total + "/" + config.offensePoints() + " points)");
         if (config.offensePoints() > 0 && total < config.offensePoints()) {
             return; // below threshold: the break stands until rollback
         }
-        tracker.rollback(player.getUniqueId());
+        OffenseTracker.Result rolledBack = tracker.rollback(player.getUniqueId());
         event.setCancelled(true);
         plugin.punisher().punish(player);
-        plugin.logEvent("Caught " + player.getName() + " (action: "
+        plugin.logEvent("Rolled back " + rolledBack.describe() + " by " + player.getName() + ".");
+        plugin.logAlert("Caught " + player.getName() + " (action: "
                 + config.action().name().toLowerCase(Locale.ROOT) + ", " + total + " points)");
     }
 

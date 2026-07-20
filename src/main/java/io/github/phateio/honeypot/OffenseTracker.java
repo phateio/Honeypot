@@ -55,14 +55,30 @@ public final class OffenseTracker {
         return brokenBlocks.containsKey(player) || placedBlocks.containsKey(player);
     }
 
+    /** Counts of what a rollback actually restored and removed. */
+    public record Result(int broken, int placed) {
+        public String describe() {
+            if (broken > 0 && placed > 0) {
+                return broken + " broken and " + placed + " placed block(s)";
+            }
+            if (placed > 0) {
+                return placed + " placed block(s)";
+            }
+            return broken + " broken block(s)";
+        }
+    }
+
     /** Restores everything the player broke and removes what they placed. */
-    public void rollback(UUID player) {
+    public Result rollback(UUID player) {
+        int brokenCount = 0;
+        int placedCount = 0;
         Map<BlockPos, BlockState> broken = brokenBlocks.remove(player);
         if (broken != null) {
             for (BlockState state : broken.values()) {
                 // Force the update but skip physics so e.g. gravel doesn't cascade.
                 state.update(true, false);
             }
+            brokenCount = broken.size();
         }
         Set<BlockPos> placed = placedBlocks.remove(player);
         if (placed != null) {
@@ -77,15 +93,26 @@ public final class OffenseTracker {
                     continue;
                 }
                 world.getBlockAt(pos.x(), pos.y(), pos.z()).setType(Material.AIR, false);
+                placedCount++;
             }
         }
+        return new Result(brokenCount, placedCount);
     }
 
     /** Rolls back every player with outstanding records (used on shutdown). */
     public void rollbackAll() {
         Set<UUID> players = new HashSet<>(brokenBlocks.keySet());
         players.addAll(placedBlocks.keySet());
-        players.forEach(this::rollback);
+        int broken = 0;
+        int placed = 0;
+        for (UUID player : players) {
+            Result result = rollback(player);
+            broken += result.broken();
+            placed += result.placed();
+        }
+        if (broken + placed > 0) {
+            plugin.logEvent("Rolled back " + new Result(broken, placed).describe() + " on shutdown.");
+        }
         logoutTimes.clear();
     }
 
@@ -108,9 +135,9 @@ public final class OffenseTracker {
                 continue;
             }
             it.remove();
-            rollback(entry.getKey());
-            plugin.logEvent("Rolled back " + entry.getValue().name() + " after "
-                    + (LOGOUT_ROLLBACK_MILLIS / 1000) + "s offline.");
+            Result result = rollback(entry.getKey());
+            plugin.logEvent("Rolled back " + result.describe() + " by " + entry.getValue().name()
+                    + " (offline > " + (LOGOUT_ROLLBACK_MILLIS / 1000) + "s).");
         }
     }
 }

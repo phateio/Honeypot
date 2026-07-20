@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "io.github.phateio"
-version = "2.0.0"
+version = "2.0.1"
 
 java {
     // Paper 26.2 (and thus its paper-api artifact) requires Java 25.

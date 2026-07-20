@@ -13,6 +13,9 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
 
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+
 import org.bukkit.command.PluginCommand;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -100,6 +103,16 @@ public final class Honeypot extends JavaPlugin {
     /** Logs to the console and, when enabled, appends to logs/honeypot.log. */
     public void logEvent(String message) {
         getLogger().info(message);
+        appendLogFile(message);
+    }
+
+    /** Like {@link #logEvent}, but red in the console so catches stand out. */
+    public void logAlert(String message) {
+        getComponentLogger().info(Component.text(message, NamedTextColor.RED));
+        appendLogFile(message);
+    }
+
+    private void appendLogFile(String message) {
         if (settings == null || !settings.logToFile()) {
             return;
         }
