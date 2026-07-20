@@ -51,10 +51,12 @@ Individual marks are removed by breaking the block while holding the
 
 ## Data and migration
 
-Honeypot data lives in `plugins/Honeypot/honeypots.yml` and is saved on every
-change. On first start, if `honeypots.yml` is absent and a legacy `list.ncsv`
-(from the original plugin) exists, it is imported and renamed to
-`list.ncsv.imported`. Legacy config files are not migrated — start from the
+Honeypot data lives in `plugins/Honeypot/honeypots.yml` and is saved whenever it
+changes (marking, unmarking, region add/remove) — never on a plain shutdown, so
+hand-added YAML comments survive restarts and are only lost when an in-game
+change rewrites the file. On first start, if `honeypots.yml` is absent and a
+legacy `list.ncsv` (from the original plugin) exists, it is imported and renamed
+to `list.ncsv.imported`. Legacy config files are not migrated — start from the
 generated `config.yml`.
 
 Catches are logged to the console and, with `log-to-file: true`, appended to

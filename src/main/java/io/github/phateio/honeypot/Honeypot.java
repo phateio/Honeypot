@@ -55,9 +55,9 @@ public final class Honeypot extends JavaPlugin {
         if (tracker != null) {
             tracker.rollbackAll(); // don't let below-threshold breaks become permanent
         }
-        if (registry != null) {
-            registry.save();
-        }
+        // No save here: every mutation already persists immediately, so a
+        // shutdown save would only rewrite an unchanged file and strip any
+        // hand-added YAML comments.
     }
 
     /** Re-reads config.yml and honeypots.yml from disk. */
