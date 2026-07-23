@@ -33,11 +33,14 @@ public final class Honeypot extends JavaPlugin {
     private PotRegistry registry;
     private OffenseTracker tracker;
     private Punisher punisher;
+    private boolean discordSrvPresent;
 
     @Override
     public void onEnable() {
         saveDefaultConfig();
         settings = HoneypotConfig.load(this);
+        // softdepend guarantees DiscordSRV, if present, is loaded before us.
+        discordSrvPresent = getServer().getPluginManager().getPlugin("DiscordSRV") != null;
         registry = new PotRegistry(this);
         registry.load();
         tracker = new OffenseTracker(this);
@@ -111,6 +114,25 @@ public final class Honeypot extends JavaPlugin {
         }
         selecting.remove(player);
         return false;
+    }
+
+    /**
+     * Sends an alert to Discord through DiscordSRV when it is installed and
+     * connected. {@link DiscordNotifier} is referenced only past the presence
+     * check, so a server without DiscordSRV never loads that class.
+     */
+    public void notifyDiscord(String message) {
+        if (!discordSrvPresent) {
+            return;
+        }
+        try {
+            if (DiscordNotifier.ready()) {
+                DiscordNotifier.send(settings.discordChannel(), message);
+            }
+        } catch (Throwable t) {
+            // A Discord hiccup must never interfere with the punishment itself.
+            getLogger().log(Level.WARNING, "Could not send honeypot alert to Discord", t);
+        }
     }
 
     /** Logs to the console and, when enabled, appends to logs/honeypot.log. */

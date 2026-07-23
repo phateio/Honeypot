@@ -4,6 +4,7 @@ main: io.github.phateio.honeypot.Honeypot
 api-version: "1.21"
 author: shikendon
 description: A Paper plugin for catching griefers with honeypot blocks.
+softdepend: [DiscordSRV]
 commands:
   honeypot:
     aliases: [hp]

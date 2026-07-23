@@ -42,6 +42,9 @@ public final class Punisher {
             Bukkit.broadcast(MiniMessage.miniMessage().deserialize(config.broadcastMessage(),
                     Placeholder.unparsed("player", player.getName())));
         }
+        if (config.discordNotify()) {
+            plugin.notifyDiscord(config.discordMessage().replace("<player>", player.getName()));
+        }
     }
 
     private static void dispatch(List<String> commands, Player player, String reason) {

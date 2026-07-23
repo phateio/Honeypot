@@ -44,6 +44,15 @@ public final class BlockListener implements Listener {
                 config.pointsFor(block.getType()));
         plugin.logAlert(player.getName() + " broke honeypot block " + block.getType()
                 + " at " + pos.serialize() + " (" + total + "/" + config.offensePoints() + " points)");
+        if (config.discordNotify()) {
+            // Alert on every break, even below the punishment threshold — a griefer's
+            // first honeypot touch is the signal worth seeing in real time. Kept terse:
+            // this goes to a public channel, so no coordinates or point totals that would
+            // reveal where the honeypots are or how close the trap is to firing. The full
+            // detail still goes to the console and logs/honeypot.log via logAlert above.
+            plugin.notifyDiscord(":honey_pot: **" + player.getName()
+                    + "** broke honeypot block " + block.getType());
+        }
         if (config.offensePoints() > 0 && total < config.offensePoints()) {
             return; // below threshold: the break stands until rollback
         }

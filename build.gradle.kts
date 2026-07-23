@@ -3,7 +3,7 @@ plugins {
 }
 
 group = "io.github.phateio"
-version = "2.1.0"
+version = "2.2.0"
 
 java {
     // Paper 26.2 (and thus its paper-api artifact) requires Java 25.
@@ -14,12 +14,16 @@ java {
 repositories {
     mavenCentral()
     maven("https://repo.papermc.io/repository/maven-public/")
+    maven("https://nexus.scarsz.me/content/groups/public/")
 }
 
 dependencies {
     // Pinned to the running server's build. Only the stable Bukkit/Paper surface
     // is used (events, commands, bans, Adventure/MiniMessage via transitive deps).
     compileOnly("io.papermc.paper:paper-api:26.2.build.40-alpha")
+    // Soft dependency: only the DiscordSRV API surface is referenced, and only
+    // when DiscordSRV is installed at runtime (see DiscordNotifier).
+    compileOnly("com.discordsrv:discordsrv:1.30.5")
 }
 
 tasks.withType<JavaCompile>().configureEach {

@@ -22,7 +22,10 @@ public record HoneypotConfig(
         List<String> kickCommands,
         int offensePoints,
         Map<Material, Integer> offensePointMap,
-        boolean logToFile) {
+        boolean logToFile,
+        boolean discordNotify,
+        String discordChannel,
+        String discordMessage) {
 
     /** What happens when a player trips the honeypot. */
     public enum Action { BAN, KICK, NONE }
@@ -68,6 +71,10 @@ public record HoneypotConfig(
                 List.copyOf(config.getStringList("kick-commands")),
                 config.getInt("offense-points", 32),
                 Map.copyOf(points),
-                config.getBoolean("log-to-file", true));
+                config.getBoolean("log-to-file", true),
+                config.getBoolean("discord-notify", true),
+                config.getString("discord-channel", "global"),
+                config.getString("discord-message",
+                        ":rotating_light: **<player>** was caught breaking a honeypot block."));
     }
 }
