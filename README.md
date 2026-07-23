@@ -3,8 +3,8 @@
 A Paper plugin for catching griefers with honeypot blocks: mark blocks or
 regions as honeypots, and players who break them accumulate offense points.
 Reaching the threshold rolls back everything they broke or placed, cancels the
-event, punishes them (ban / kick / custom console commands), and optionally
-broadcasts the catch.
+event, and punishes them (ban / kick / custom console commands). Catches can be
+broadcast in-game, and honeypot breaks can be alerted to Discord via DiscordSRV.
 
 This is a from-scratch rewrite of the original
 [Honeypot](https://github.com/andune/Honeypot) plugin for modern Paper
@@ -54,6 +54,33 @@ permission (which also makes you immune to honeypots).
 | `honeypot.create` | op | Manage honeypots (command and selection mode). |
 | `honeypot.break` | op | Break honeypot blocks without penalty; removes the mark. |
 | `honeypot.place` | op | Place blocks inside honeypots without being recorded. |
+
+## Discord alerts
+
+If [DiscordSRV](https://www.spigotmc.org/resources/discordsrv.18494/) is
+installed, Honeypot posts alerts to a Discord channel; otherwise this is a
+no-op and the plugin runs normally. DiscordSRV is an optional soft dependency,
+never required.
+
+- **Every break** is alerted immediately — even below the punishment threshold
+  — so a griefer's first honeypot touch is visible in real time.
+- **On catch** (threshold reached), a second alert marks the punishment.
+
+Alerts are deliberately terse (no coordinates or point totals) since the
+channel may be public; the full detail — location and running score — still
+goes to the console and `logs/honeypot.log`.
+
+Configured in `config.yml`:
+
+| Key | Default | Effect |
+|-----|---------|--------|
+| `discord-notify` | `true` | Master switch for both alerts. |
+| `discord-channel` | `global` | A DiscordSRV **Channels** name (from DiscordSRV's own config), not a raw channel ID. |
+| `discord-break-message` | `:honey_pot: **<player>** broke honeypot block <block>` | Sent on every break. |
+| `discord-caught-message` | `:boot: **<player>** was caught breaking a honeypot block.` | Sent when the player trips the honeypot. |
+
+Messages are plain Discord markdown; `<player>` and `<block>` are substituted
+(`<block>` in the break message only).
 
 ## Data and migration
 
