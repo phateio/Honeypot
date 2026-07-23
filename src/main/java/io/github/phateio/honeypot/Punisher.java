@@ -43,7 +43,7 @@ public final class Punisher {
                     Placeholder.unparsed("player", player.getName())));
         }
         if (config.discordNotify()) {
-            plugin.notifyDiscord(config.discordMessage().replace("<player>", player.getName()));
+            plugin.notifyDiscord(config.discordCaughtMessage().replace("<player>", player.getName()));
         }
     }
 

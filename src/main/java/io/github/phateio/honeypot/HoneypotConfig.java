@@ -25,7 +25,8 @@ public record HoneypotConfig(
         boolean logToFile,
         boolean discordNotify,
         String discordChannel,
-        String discordMessage) {
+        String discordBreakMessage,
+        String discordCaughtMessage) {
 
     /** What happens when a player trips the honeypot. */
     public enum Action { BAN, KICK, NONE }
@@ -74,7 +75,9 @@ public record HoneypotConfig(
                 config.getBoolean("log-to-file", true),
                 config.getBoolean("discord-notify", true),
                 config.getString("discord-channel", "global"),
-                config.getString("discord-message",
-                        ":rotating_light: **<player>** was caught breaking a honeypot block."));
+                config.getString("discord-break-message",
+                        ":honey_pot: **<player>** broke honeypot block <block>"),
+                config.getString("discord-caught-message",
+                        ":boot: **<player>** was caught breaking a honeypot block."));
     }
 }

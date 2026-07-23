@@ -8,12 +8,14 @@ kick-message: You have been caught destroying a honeypot block.
 ban-source: Server
 broadcast-message: '<dark_red>[Honeypot]<gray> Player <dark_red><player><gray> was caught breaking a honeypot block.'
 
-# Send a catch alert to Discord through DiscordSRV (ignored if it isn't installed).
+# Send honeypot alerts to Discord through DiscordSRV (ignored if it isn't installed).
 # discord-channel is a DiscordSRV "Channels:" name (e.g. global), not a raw ID.
-# discord-message is plain Discord markdown; <player> is substituted.
+# Messages are plain Discord markdown; <player> and <block> are substituted.
+# Kept terse on purpose — this is a public channel, so no coordinates or points.
 discord-notify: true
 discord-channel: global
-discord-message: ':rotating_light: **<player>** was caught breaking a honeypot block.'
+discord-break-message: ':honey_pot: **<player>** broke honeypot block <block>'
+discord-caught-message: ':boot: **<player>** was caught breaking a honeypot block.'
 
 # Non-empty lists override the built-in ban/kick API with console commands.
 # Placeholders: %player%, %reason%
