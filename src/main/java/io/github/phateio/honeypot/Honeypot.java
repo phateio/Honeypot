@@ -46,6 +46,7 @@ public final class Honeypot extends JavaPlugin {
         tracker = new OffenseTracker(this);
         punisher = new Punisher(this);
         getServer().getPluginManager().registerEvents(new BlockListener(this), this);
+        getServer().getPluginManager().registerEvents(new EntityListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
         HoneypotCommand executor = new HoneypotCommand(this);
         PluginCommand command = Objects.requireNonNull(getCommand("honeypot"));

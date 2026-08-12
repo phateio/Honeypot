@@ -27,6 +27,14 @@ code from the original project.
   honeypot, stays logged out for over 300 seconds, or the server stops.
 - Placements inside honeypots by players without `honeypot.place` are recorded
   and removed on rollback, so a statue can't be altered by filling it in.
+- **Hanging entities** standing on a marked position — item frames, glow item
+  frames and paintings — are covered too, so a display piece is protected by
+  the position it hangs in rather than by the wall behind it. Taking the item
+  out of a frame counts as well as tearing the frame down; both are rolled back
+  with everything else, and a frame knocked loose by breaking the block it hangs
+  on comes back with it. They score as `ITEM_FRAME` / `GLOW_ITEM_FRAME` /
+  `PAINTING` in `offense-point-map`, so a map wall can be weighted far above the
+  blocks around it.
 
 ## Commands
 

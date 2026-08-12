@@ -3,12 +3,15 @@ package io.github.phateio.honeypot;
 import java.util.Locale;
 
 import org.bukkit.block.Block;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Hanging;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.util.BoundingBox;
 
 /** Break and placement handling for marked honeypot positions. */
 public final class BlockListener implements Listener {
@@ -40,6 +43,7 @@ public final class BlockListener implements Listener {
         }
         HoneypotConfig config = plugin.settings();
         OffenseTracker tracker = plugin.tracker();
+        snapshotAttachedHangings(player, block);
         int total = tracker.recordBreak(player.getUniqueId(), pos, block.getState(),
                 config.pointsFor(block.getType()));
         plugin.logAlert(player.getName() + " broke honeypot block " + block.getType()
@@ -77,5 +81,21 @@ public final class BlockListener implements Listener {
         // Not cancelled and worth no points; the position is removed again on
         // rollback so honeypot structures can't be altered by building.
         plugin.tracker().recordPlace(event.getPlayer().getUniqueId(), pos);
+    }
+
+    /**
+     * Records the hangings this break is about to drop. Breaking the block an
+     * item frame hangs on detaches it through a physics event that names no
+     * player, so the frame is attributed here — to whoever pulled the block out
+     * — while it still exists and can be snapshotted.
+     */
+    private void snapshotAttachedHangings(Player player, Block block) {
+        BoundingBox around = BoundingBox.of(block).expand(1.0);
+        for (Entity entity : block.getWorld().getNearbyEntities(around, e -> e instanceof Hanging)) {
+            Hanging hanging = (Hanging) entity;
+            if (hanging.getLocation().getBlock().getRelative(hanging.getAttachedFace()).equals(block)) {
+                plugin.tracker().snapshotHanging(player.getUniqueId(), HangingSnapshot.of(hanging));
+            }
+        }
     }
 }
