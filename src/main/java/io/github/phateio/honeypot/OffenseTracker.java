@@ -1,9 +1,11 @@
 package io.github.phateio.honeypot;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -29,6 +31,7 @@ public final class OffenseTracker {
     private final Honeypot plugin;
     private final Map<UUID, Integer> points = new HashMap<>();
     private final Map<UUID, Map<BlockPos, BlockState>> brokenBlocks = new HashMap<>();
+    private final Map<UUID, Map<HangingSnapshot.Key, HangingSnapshot>> brokenHangings = new HashMap<>();
     private final Map<UUID, Set<BlockPos>> placedBlocks = new HashMap<>();
     // Pre-break states of every honeypot block broken this runtime. Never
     // cleared: placement rollback must not turn a restored honeypot block into
@@ -47,24 +50,71 @@ public final class OffenseTracker {
         return points.merge(player, pointsEarned, Integer::sum);
     }
 
+    /**
+     * Records a hanging entity offense and returns the player's new point total.
+     *
+     * <p>Only the first snapshot per hanging is kept, so a player who first
+     * steals a frame's item and then breaks the empty frame is rolled back to
+     * the frame <em>with</em> its item rather than to an empty one.
+     */
+    public int recordHangingBreak(UUID player, HangingSnapshot snapshot, int pointsEarned) {
+        snapshotHanging(player, snapshot);
+        return points.merge(player, pointsEarned, Integer::sum);
+    }
+
+    /**
+     * Records a hanging that a honeypot block break knocks down. It earns no
+     * points of its own — the block break is the scored offense — but it still
+     * has to come back on rollback.
+     */
+    public void snapshotHanging(UUID player, HangingSnapshot snapshot) {
+        brokenHangings.computeIfAbsent(player, k -> new LinkedHashMap<>())
+                .putIfAbsent(snapshot.key(), snapshot);
+    }
+
+    /**
+     * True when this player has an outstanding hanging snapshot that rested on
+     * {@code block}. The hanging is already gone, so a scan of the world cannot
+     * find it, but its snapshot still needs this block back before it can be
+     * restored onto it.
+     */
+    public boolean hasHangingRestingOn(UUID player, BlockPos block) {
+        Map<HangingSnapshot.Key, HangingSnapshot> hangings = brokenHangings.get(player);
+        if (hangings == null) {
+            return false;
+        }
+        for (HangingSnapshot snapshot : hangings.values()) {
+            if (snapshot.hangsOn(block)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public void recordPlace(UUID player, BlockPos pos) {
         placedBlocks.computeIfAbsent(player, k -> new HashSet<>()).add(pos);
     }
 
     public boolean hasRecords(UUID player) {
-        return brokenBlocks.containsKey(player) || placedBlocks.containsKey(player);
+        return brokenBlocks.containsKey(player)
+                || brokenHangings.containsKey(player)
+                || placedBlocks.containsKey(player);
     }
 
     /** Counts of what a rollback actually restored and removed. */
-    public record Result(int broken, int placed) {
+    public record Result(int broken, int placed, int hangings) {
         public String describe() {
-            if (broken > 0 && placed > 0) {
-                return broken + " broken and " + placed + " placed block(s)";
+            List<String> parts = new ArrayList<>();
+            if (broken > 0) {
+                parts.add(broken + " broken block(s)");
             }
             if (placed > 0) {
-                return placed + " placed block(s)";
+                parts.add(placed + " placed block(s)");
             }
-            return broken + " broken block(s)";
+            if (hangings > 0) {
+                parts.add(hangings + " hanging(s)");
+            }
+            return parts.isEmpty() ? "0 broken block(s)" : String.join(" and ", parts);
         }
     }
 
@@ -96,22 +146,40 @@ public final class OffenseTracker {
                 placedCount++;
             }
         }
-        return new Result(brokenCount, placedCount);
+        // Hangings go back last: an item frame cannot be placed until the block
+        // it hangs on has been restored above.
+        int hangingCount = 0;
+        Map<HangingSnapshot.Key, HangingSnapshot> hangings = brokenHangings.remove(player);
+        if (hangings != null) {
+            for (HangingSnapshot snapshot : hangings.values()) {
+                if (snapshot.restore()) {
+                    hangingCount++;
+                } else {
+                    plugin.getLogger().warning("Could not restore honeypot " + snapshot.describe()
+                            + " at " + snapshot.pos().serialize());
+                }
+            }
+        }
+        return new Result(brokenCount, placedCount, hangingCount);
     }
 
     /** Rolls back every player with outstanding records (used on shutdown). */
     public void rollbackAll() {
         Set<UUID> players = new HashSet<>(brokenBlocks.keySet());
+        players.addAll(brokenHangings.keySet());
         players.addAll(placedBlocks.keySet());
         int broken = 0;
         int placed = 0;
+        int hangings = 0;
         for (UUID player : players) {
             Result result = rollback(player);
             broken += result.broken();
             placed += result.placed();
+            hangings += result.hangings();
         }
-        if (broken + placed > 0) {
-            plugin.logEvent("Rolled back " + new Result(broken, placed).describe() + " on shutdown.");
+        if (broken + placed + hangings > 0) {
+            plugin.logEvent("Rolled back " + new Result(broken, placed, hangings).describe()
+                    + " on shutdown.");
         }
         logoutTimes.clear();
     }

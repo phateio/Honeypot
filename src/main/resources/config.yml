@@ -25,6 +25,11 @@ kick-commands: []
 # Total points required to trip the honeypot; blocks not in the map are 1 point.
 offense-points: 32
 offense-point-map:
+  # Hangings score by type; without an entry they would be worth 1 like any
+  # block, so a marked map wall would take 32 thefts to trip at the default.
+  ITEM_FRAME: 5
+  GLOW_ITEM_FRAME: 5
+  PAINTING: 5
   GLASS: 5
   WHITE_WOOL: 5
   ORANGE_WOOL: 5

@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -18,7 +19,10 @@ import java.util.logging.Level;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
+import org.bukkit.Material;
 import org.bukkit.command.PluginCommand;
+import org.bukkit.entity.Player;
+import org.bukkit.event.Cancellable;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class Honeypot extends JavaPlugin {
@@ -46,6 +50,7 @@ public final class Honeypot extends JavaPlugin {
         tracker = new OffenseTracker(this);
         punisher = new Punisher(this);
         getServer().getPluginManager().registerEvents(new BlockListener(this), this);
+        getServer().getPluginManager().registerEvents(new EntityListener(this), this);
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
         HoneypotCommand executor = new HoneypotCommand(this);
         PluginCommand command = Objects.requireNonNull(getCommand("honeypot"));
@@ -133,6 +138,46 @@ public final class Honeypot extends JavaPlugin {
             // A Discord hiccup must never interfere with the punishment itself.
             getLogger().log(Level.WARNING, "Could not send honeypot alert to Discord", t);
         }
+    }
+
+    /**
+     * Announces one recorded honeypot offense, whatever kind it was.
+     *
+     * <p>Alerts fire on every offense, even below the punishment threshold — a
+     * griefer's first honeypot touch is the signal worth seeing in real time.
+     * The Discord line is deliberately terse (no coordinates or points) since it
+     * goes to a public channel; the full detail still reaches the console and
+     * logs/honeypot.log.
+     *
+     * @param what      what was destroyed, e.g. {@code block OAK_FENCE}
+     * @param scoredAs  the material it scored as, substituted into {@code <block>}
+     * @param total     the player's running point total after this offense
+     */
+    public void alertOffense(Player player, String what, BlockPos pos, Material scoredAs, int total) {
+        logAlert(player.getName() + " broke honeypot " + what + " at " + pos.serialize()
+                + " (" + total + "/" + settings.offensePoints() + " points)");
+        if (settings.discordNotify()) {
+            notifyDiscord(settings.discordBreakMessage()
+                    .replace("<player>", player.getName())
+                    .replace("<block>", scoredAs.name()));
+        }
+    }
+
+    /**
+     * Rolls the player back, cancels their event and punishes them once the
+     * running total reaches the threshold. Below it this does nothing and the
+     * damage stands until a later rollback.
+     */
+    public void punishIfTripped(Player player, int total, Cancellable event) {
+        if (settings.offensePoints() > 0 && total < settings.offensePoints()) {
+            return;
+        }
+        OffenseTracker.Result rolledBack = tracker.rollback(player.getUniqueId());
+        event.setCancelled(true);
+        punisher.punish(player);
+        logEvent("Rolled back " + rolledBack.describe() + " by " + player.getName() + ".");
+        logAlert("Caught " + player.getName() + " (action: "
+                + settings.action().name().toLowerCase(Locale.ROOT) + ", " + total + " points)");
     }
 
     /** Logs to the console and, when enabled, appends to logs/honeypot.log. */

@@ -27,6 +27,22 @@ code from the original project.
   honeypot, stays logged out for over 300 seconds, or the server stops.
 - Placements inside honeypots by players without `honeypot.place` are recorded
   and removed on rollback, so a statue can't be altered by filling it in.
+- **Hanging entities** standing on a marked position — item frames, glow item
+  frames and paintings — are covered too, so a display piece is protected by
+  the position it hangs in rather than by the wall behind it. A painting counts
+  as marked when *any* block it covers is. Three things trip it, all rolled back
+  with everything else:
+  - taking the item out of a frame, which leaves the frame standing,
+  - breaking the hanging itself,
+  - breaking the block it hangs on — whether or not **that** block is marked, so
+    punching the wall is not a way around the frame in front of it. An unmarked
+    hanging on a marked block earns no points of its own but still comes back.
+
+  They score as `ITEM_FRAME` / `GLOW_ITEM_FRAME` / `PAINTING` in
+  `offense-point-map`, shipped at 5 like the other display materials, so a map
+  wall trips after a handful of thefts rather than the 32 an unlisted material
+  would take. Existing installs keep their own `config.yml` — add the three
+  entries to weight hangings there.
 
 ## Commands
 
@@ -34,7 +50,7 @@ code from the original project.
 
 | Command | Effect |
 |---------|--------|
-| `/hp` | Toggle selection mode: right-click a block with an empty main hand to mark it into the active honeypot. |
+| `/hp` | Toggle selection mode: right-click a block — or a hanging (item frame, painting) — with an empty main hand to mark it into the active honeypot. |
 | `/hp create <name>` | Create/select the active honeypot that marks and regions go into. |
 | `/hp pos1 [x y z]` / `/hp pos2 [x y z]` | Set region corners — the targeted block (within 10 blocks, else the block underfoot) or explicit coordinates. |
 | `/hp region` | Add a region from pos1/pos2 (same world) to the active honeypot. |
@@ -44,8 +60,19 @@ code from the original project.
 | `/hp reload` | Reload config and honeypot data. |
 
 Marks made without an active honeypot go into a pot named `default`. Individual
-marks are removed by breaking the block while holding the `honeypot.break`
-permission (which also makes you immune to honeypots).
+marks are removed by destroying whatever carries them while holding the
+`honeypot.break` permission (which also makes you immune to honeypots) — the
+block for a block mark, the hanging itself for a hanging mark.
+
+A hanging has to be marked by right-clicking the hanging itself. Its position is
+an air block that the hanging covers, so clicking "it" as a block is not
+possible, and `/hp pos1|pos2` without coordinates raytraces blocks and returns
+the wall behind — marking that protects the wall, not the frame in front of it.
+Unmarking is asymmetric the same way: breaking the wall behind a marked frame
+drops the frame but leaves the mark, since the mark is on the air position the
+frame occupied. Break the hanging — and note a frame still holding something
+takes two hits, because the first only takes the item out and deliberately
+leaves the mark alone.
 
 ## Permissions
 

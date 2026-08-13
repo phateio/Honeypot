@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,6 +31,8 @@ public final class PotRegistry {
 
     private final JavaPlugin plugin;
     private final Map<String, Pot> pots = new LinkedHashMap<>();
+    /** Per-world {minX, minY, minZ, maxX, maxY, maxZ} over every mark, rebuilt on change. */
+    private final Map<String, int[]> markBounds = new HashMap<>();
 
     public PotRegistry(JavaPlugin plugin) {
         this.plugin = plugin;
@@ -47,6 +50,79 @@ public final class PotRegistry {
             }
         }
         return false;
+    }
+
+    /** True when any block the hanging occupies is marked. */
+    public boolean covers(HangingSnapshot hanging) {
+        for (BlockPos pos : hanging.covered()) {
+            if (isHoneypot(pos)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Cheap pre-filter for the hanging scan in {@link BlockListener}: true when
+     * any marked position lies within {@code radius} blocks. Block breaks are
+     * frequent and looking up nearby entities is not free, so this keeps that
+     * lookup off the common path of someone mining far from any honeypot.
+     */
+    public boolean hasMarkWithin(BlockPos pos, int radius) {
+        // Almost every break on a server is nowhere near a honeypot, and this
+        // runs on all of them, so reject those against the world's overall mark
+        // bounds before touching the per-mark list.
+        int[] bounds = markBounds.get(pos.world());
+        if (bounds == null
+                || pos.x() < bounds[0] - radius || pos.x() > bounds[3] + radius
+                || pos.y() < bounds[1] - radius || pos.y() > bounds[4] + radius
+                || pos.z() < bounds[2] - radius || pos.z() > bounds[5] + radius) {
+            return false;
+        }
+        for (Pot pot : pots.values()) {
+            for (BlockPos block : pot.blocks()) {
+                if (block.world().equals(pos.world())
+                        && Math.abs(block.x() - pos.x()) <= radius
+                        && Math.abs(block.y() - pos.y()) <= radius
+                        && Math.abs(block.z() - pos.z()) <= radius) {
+                    return true;
+                }
+            }
+            for (Region region : pot.regions()) {
+                if (region.within(pos, radius)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /** Recomputes {@link #markBounds}; called wherever the pot set changes. */
+    private void rebuildBounds() {
+        markBounds.clear();
+        for (Pot pot : pots.values()) {
+            for (BlockPos block : pot.blocks()) {
+                grow(block.world(), block.x(), block.y(), block.z(), block.x(), block.y(), block.z());
+            }
+            for (Region region : pot.regions()) {
+                grow(region.world(), region.minX(), region.minY(), region.minZ(),
+                        region.maxX(), region.maxY(), region.maxZ());
+            }
+        }
+    }
+
+    private void grow(String world, int minX, int minY, int minZ, int maxX, int maxY, int maxZ) {
+        int[] bounds = markBounds.get(world);
+        if (bounds == null) {
+            markBounds.put(world, new int[] {minX, minY, minZ, maxX, maxY, maxZ});
+            return;
+        }
+        bounds[0] = Math.min(bounds[0], minX);
+        bounds[1] = Math.min(bounds[1], minY);
+        bounds[2] = Math.min(bounds[2], minZ);
+        bounds[3] = Math.max(bounds[3], maxX);
+        bounds[4] = Math.max(bounds[4], maxY);
+        bounds[5] = Math.max(bounds[5], maxZ);
     }
 
     private Pot potFor(String name) {
@@ -176,6 +252,7 @@ public final class PotRegistry {
     }
 
     private void logLoaded() {
+        rebuildBounds();
         int blocks = pots.values().stream().mapToInt(p -> p.blocks().size()).sum();
         int regions = pots.values().stream().mapToInt(p -> p.regions().size()).sum();
         plugin.getLogger().info("Loaded " + pots.size() + " honeypot(s) ("
@@ -183,6 +260,7 @@ public final class PotRegistry {
     }
 
     public void save() {
+        rebuildBounds();
         YamlConfiguration yaml = new YamlConfiguration();
         // Build a nested map so nothing depends on '.' not appearing in pot
         // names, and LinkedHashMap keeps the pots in their existing order.

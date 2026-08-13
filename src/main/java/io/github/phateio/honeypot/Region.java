@@ -11,10 +11,15 @@ public record Region(String world, int minX, int minY, int minZ, int maxX, int m
     }
 
     public boolean contains(BlockPos pos) {
+        return within(pos, 0);
+    }
+
+    /** True when the cuboid comes within {@code radius} blocks of {@code pos}. */
+    public boolean within(BlockPos pos, int radius) {
         return world.equals(pos.world())
-                && pos.x() >= minX && pos.x() <= maxX
-                && pos.y() >= minY && pos.y() <= maxY
-                && pos.z() >= minZ && pos.z() <= maxZ;
+                && pos.x() >= minX - radius && pos.x() <= maxX + radius
+                && pos.y() >= minY - radius && pos.y() <= maxY + radius
+                && pos.z() >= minZ - radius && pos.z() <= maxZ + radius;
     }
 
     /** Serialized form used in honeypots.yml: {@code world,minX,minY,minZ,maxX,maxY,maxZ}. */
