@@ -48,7 +48,7 @@ code from the original project.
 
 | Command | Effect |
 |---------|--------|
-| `/hp` | Toggle selection mode: right-click a block with an empty main hand to mark it into the active honeypot. |
+| `/hp` | Toggle selection mode: right-click a block — or a hanging (item frame, painting) — with an empty main hand to mark it into the active honeypot. |
 | `/hp create <name>` | Create/select the active honeypot that marks and regions go into. |
 | `/hp pos1 [x y z]` / `/hp pos2 [x y z]` | Set region corners — the targeted block (within 10 blocks, else the block underfoot) or explicit coordinates. |
 | `/hp region` | Add a region from pos1/pos2 (same world) to the active honeypot. |
@@ -60,6 +60,11 @@ code from the original project.
 Marks made without an active honeypot go into a pot named `default`. Individual
 marks are removed by breaking the block while holding the `honeypot.break`
 permission (which also makes you immune to honeypots).
+
+A hanging has to be marked by right-clicking the hanging itself. Its position is
+an air block that the hanging covers, so clicking "it" as a block is not
+possible, and `/hp pos1|pos2` without coordinates raytraces blocks and returns
+the wall behind — marking that protects the wall, not the frame in front of it.
 
 ## Permissions
 

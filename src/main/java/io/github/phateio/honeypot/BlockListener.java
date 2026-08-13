@@ -65,18 +65,19 @@ public final class BlockListener implements Listener {
             total = tracker.recordBreak(player.getUniqueId(), pos, block.getState(),
                     config.pointsFor(block.getType()));
             plugin.alertOffense(player, "block " + block.getType(), pos, block.getType(), total);
-            // Unmarked hangings on a marked block are part of what the honeypot
-            // protects, so they come back on rollback — but the block break is
-            // the scored offense and they earn no points of their own.
-            for (HangingSnapshot hanging : collateral) {
-                tracker.snapshotHanging(player.getUniqueId(), hanging);
-            }
         } else {
             // The block is not marked, but a marked hanging rests on it. Record
             // it for rollback anyway and score it nothing: without the block
             // back, restoring the hanging leaves it with nothing to hang on and
             // it simply drops again.
             tracker.recordBreak(player.getUniqueId(), pos, block.getState(), 0);
+        }
+        // Whichever path put the block on the rollback list, everything else it
+        // was holding up has to come back with it. These earn no points — the
+        // block or the marked hanging is the scored offense — but a break that
+        // is undone must not leave an unmarked frame permanently on the floor.
+        for (HangingSnapshot hanging : collateral) {
+            tracker.snapshotHanging(player.getUniqueId(), hanging);
         }
         for (HangingSnapshot hanging : scored) {
             total = tracker.recordHangingBreak(player.getUniqueId(), hanging,
