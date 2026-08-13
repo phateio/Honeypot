@@ -31,7 +31,7 @@ public final class OffenseTracker {
     private final Honeypot plugin;
     private final Map<UUID, Integer> points = new HashMap<>();
     private final Map<UUID, Map<BlockPos, BlockState>> brokenBlocks = new HashMap<>();
-    private final Map<UUID, Map<BlockPos, HangingSnapshot>> brokenHangings = new HashMap<>();
+    private final Map<UUID, Map<HangingSnapshot.Key, HangingSnapshot>> brokenHangings = new HashMap<>();
     private final Map<UUID, Set<BlockPos>> placedBlocks = new HashMap<>();
     // Pre-break states of every honeypot block broken this runtime. Never
     // cleared: placement rollback must not turn a restored honeypot block into
@@ -53,7 +53,7 @@ public final class OffenseTracker {
     /**
      * Records a hanging entity offense and returns the player's new point total.
      *
-     * <p>Only the first snapshot per position is kept, so a player who first
+     * <p>Only the first snapshot per hanging is kept, so a player who first
      * steals a frame's item and then breaks the empty frame is rolled back to
      * the frame <em>with</em> its item rather than to an empty one.
      */
@@ -69,7 +69,7 @@ public final class OffenseTracker {
      */
     public void snapshotHanging(UUID player, HangingSnapshot snapshot) {
         brokenHangings.computeIfAbsent(player, k -> new LinkedHashMap<>())
-                .putIfAbsent(snapshot.pos(), snapshot);
+                .putIfAbsent(snapshot.key(), snapshot);
     }
 
     public void recordPlace(UUID player, BlockPos pos) {
@@ -130,7 +130,7 @@ public final class OffenseTracker {
         // Hangings go back last: an item frame cannot be placed until the block
         // it hangs on has been restored above.
         int hangingCount = 0;
-        Map<BlockPos, HangingSnapshot> hangings = brokenHangings.remove(player);
+        Map<HangingSnapshot.Key, HangingSnapshot> hangings = brokenHangings.remove(player);
         if (hangings != null) {
             for (HangingSnapshot snapshot : hangings.values()) {
                 if (snapshot.restore()) {

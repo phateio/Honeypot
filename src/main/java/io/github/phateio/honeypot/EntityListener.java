@@ -51,20 +51,23 @@ public final class EntityListener implements Listener {
         if (player == null) {
             return; // mob, explosion or dispenser: nobody to hold responsible
         }
-        if (!(hanging instanceof ItemFrame) && !(hanging instanceof Painting)) {
-            // LeashHitch is a Hanging too and reaches this event, but it resolves
-            // to the fence it is tied to — which may well be marked as a frame's
-            // support — and this class can neither score nor restore one. Untying
-            // a horse must never read as griefing.
-            return;
+        if (!HangingSnapshot.isSupported(hanging)) {
+            return; // a leash knot resolves onto its fence; untying is not griefing
         }
         HangingSnapshot snapshot = HangingSnapshot.of(hanging);
         if (!plugin.registry().covers(snapshot)) {
             return;
         }
         if (player.hasPermission("honeypot.break")) {
-            // Immune. Unlike a block, a hanging carries no individual mark to
-            // remove — the position stays marked for whoever comes next.
+            // Immune, and this is the unmark route. A hanging's position is air,
+            // so no BlockBreakEvent can ever reach it — without this a mark made
+            // by right-clicking could only be undone by /hp delete or by editing
+            // honeypots.yml, which is what right-click marking exists to avoid.
+            String potName = plugin.registry().removeBlock(snapshot.pos());
+            if (potName != null) {
+                player.sendMessage("§6[Honeypot] §fmark removed from '" + potName + "': "
+                        + snapshot.pos().serialize());
+            }
             return;
         }
         int total = plugin.tracker().recordHangingBreak(player.getUniqueId(), snapshot,

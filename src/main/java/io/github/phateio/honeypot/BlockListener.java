@@ -115,7 +115,7 @@ public final class BlockListener implements Listener {
         // one-block margin catches even a large painting by its bounding box.
         BoundingBox around = BoundingBox.of(block).expand(1.0);
         List<HangingSnapshot> out = new ArrayList<>();
-        for (Entity entity : block.getWorld().getNearbyEntities(around, e -> e instanceof Hanging)) {
+        for (Entity entity : block.getWorld().getNearbyEntities(around, HangingSnapshot::isSupported)) {
             HangingSnapshot hanging = HangingSnapshot.of((Hanging) entity);
             if (hanging.hangsOn(pos)) {
                 out.add(hanging);

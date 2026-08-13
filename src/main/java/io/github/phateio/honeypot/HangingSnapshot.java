@@ -68,6 +68,26 @@ public record HangingSnapshot(
                 (int) Math.floor(x), (int) Math.floor(y), (int) Math.floor(z));
     }
 
+    /**
+     * The hanging types this plugin can score and restore. {@link Hanging} also
+     * covers {@link org.bukkit.entity.LeashHitch}, whose position resolves onto
+     * the fence it is tied to — the very block a frame's support tends to be —
+     * so every entry point narrows through this rather than trusting Hanging.
+     */
+    public static boolean isSupported(Entity entity) {
+        return entity instanceof ItemFrame || entity instanceof Painting;
+    }
+
+    /**
+     * Identity of a hanging. The anchor alone is ambiguous: a floor frame and a
+     * wall frame do not overlap, so two can legally share one block position.
+     */
+    public record Key(BlockPos pos, BlockFace facing) { }
+
+    public Key key() {
+        return new Key(pos, facing);
+    }
+
     public static HangingSnapshot of(Hanging hanging) {
         ItemStack item = null;
         Rotation rotation = null;

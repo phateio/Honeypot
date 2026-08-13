@@ -73,9 +73,10 @@ public final class PlayerListener implements Listener {
     @EventHandler
     public void onInteractEntity(PlayerInteractEntityEvent event) {
         if (event.getHand() != EquipmentSlot.HAND
-                || !(event.getRightClicked() instanceof Hanging hanging)) {
-            return;
+                || !HangingSnapshot.isSupported(event.getRightClicked())) {
+            return; // a leash knot resolves onto its fence, not onto itself
         }
+        Hanging hanging = (Hanging) event.getRightClicked();
         Player player = event.getPlayer();
         if (!plugin.isSelecting(player.getUniqueId())) {
             return;
