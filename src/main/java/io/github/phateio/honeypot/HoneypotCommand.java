@@ -37,7 +37,8 @@ public final class HoneypotCommand implements TabExecutor {
             }
             boolean selecting = plugin.toggleSelecting(player.getUniqueId());
             player.sendMessage(PREFIX + (selecting
-                    ? "selection mode on: right-click blocks with an empty main hand to mark them into '"
+                    ? "selection mode on: right-click blocks, item frames or paintings with an"
+                            + " empty main hand to mark them into '"
                             + plugin.activePot(player.getUniqueId()) + "'."
                     : "selection mode off."));
             return true;
@@ -78,7 +79,7 @@ public final class HoneypotCommand implements TabExecutor {
         }
         Pot existing = plugin.registry().pot(name);
         sender.sendMessage(PREFIX + (existing == null ? "now marking into new honeypot '" : "now marking into '")
-                + name + "': right-click blocks or set pos1/pos2 and /hp region.");
+                + name + "': right-click blocks or hangings, or set pos1/pos2 and /hp region.");
     }
 
     private void setCorner(CommandSender sender, String[] args, Map<UUID, BlockPos> store, String name) {

@@ -3,7 +3,6 @@ package io.github.phateio.honeypot;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Hanging;
 import org.bukkit.entity.ItemFrame;
-import org.bukkit.entity.Painting;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.Cancellable;
@@ -35,7 +34,7 @@ public final class EntityListener implements Listener {
     /** The hanging itself being torn down — includes frames that are already empty. */
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onHangingBreakByEntity(HangingBreakByEntityEvent event) {
-        handle(resolvePlayer(event.getRemover()), event.getEntity(), event);
+        handle(resolvePlayer(event.getRemover()), event.getEntity(), event, true);
     }
 
     /** Hitting a frame that holds something drops the item and spares the frame. */
@@ -44,10 +43,10 @@ public final class EntityListener implements Listener {
         if (!(event.getEntity() instanceof ItemFrame frame) || frame.getItem().getType().isAir()) {
             return; // an empty frame breaks instead, which the hanging event covers
         }
-        handle(resolvePlayer(event.getDamager()), frame, event);
+        handle(resolvePlayer(event.getDamager()), frame, event, false);
     }
 
-    private void handle(Player player, Hanging hanging, Cancellable event) {
+    private void handle(Player player, Hanging hanging, Cancellable event, boolean destroys) {
         if (player == null) {
             return; // mob, explosion or dispenser: nobody to hold responsible
         }
@@ -59,14 +58,19 @@ public final class EntityListener implements Listener {
             return;
         }
         if (player.hasPermission("honeypot.break")) {
-            // Immune, and this is the unmark route. A hanging's position is air,
-            // so no BlockBreakEvent can ever reach it — without this a mark made
-            // by right-clicking could only be undone by /hp delete or by editing
-            // honeypots.yml, which is what right-click marking exists to avoid.
-            String potName = plugin.registry().removeBlock(snapshot.pos());
-            if (potName != null) {
-                player.sendMessage("§6[Honeypot] §fmark removed from '" + potName + "': "
-                        + snapshot.pos().serialize());
+            // Immune, and taking the hanging down is the unmark route: a hanging's
+            // position is air, so no BlockBreakEvent can ever reach it and a mark
+            // made by right-clicking would otherwise need /hp delete or a hand
+            // edit. Only the path that actually destroys it unmarks, which keeps
+            // the block path's property that a mark and the thing it marks go
+            // together — emptying a frame is far too cheap an action to silently
+            // retire a honeypot while the frame stays on the wall.
+            if (destroys) {
+                String potName = plugin.registry().removeBlock(snapshot.pos());
+                if (potName != null) {
+                    player.sendMessage("§6[Honeypot] §fmark removed from '" + potName + "': "
+                            + snapshot.pos().serialize());
+                }
             }
             return;
         }
