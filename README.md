@@ -29,12 +29,18 @@ code from the original project.
   and removed on rollback, so a statue can't be altered by filling it in.
 - **Hanging entities** standing on a marked position — item frames, glow item
   frames and paintings — are covered too, so a display piece is protected by
-  the position it hangs in rather than by the wall behind it. Taking the item
-  out of a frame counts as well as tearing the frame down; both are rolled back
-  with everything else, and a frame knocked loose by breaking the block it hangs
-  on comes back with it. They score as `ITEM_FRAME` / `GLOW_ITEM_FRAME` /
-  `PAINTING` in `offense-point-map`, so a map wall can be weighted far above the
-  blocks around it.
+  the position it hangs in rather than by the wall behind it. A painting counts
+  as marked when *any* block it covers is. Three things trip it, all rolled back
+  with everything else:
+  - taking the item out of a frame, which leaves the frame standing,
+  - breaking the hanging itself,
+  - breaking the block it hangs on — whether or not **that** block is marked, so
+    punching the wall is not a way around the frame in front of it. An unmarked
+    hanging on a marked block earns no points of its own but still comes back.
+
+  They score as `ITEM_FRAME` / `GLOW_ITEM_FRAME` / `PAINTING` in
+  `offense-point-map`, so a map wall can be weighted far above the blocks around
+  it.
 
 ## Commands
 

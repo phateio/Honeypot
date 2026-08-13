@@ -1,7 +1,5 @@
 package io.github.phateio.honeypot;
 
-import java.util.Locale;
-
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Hanging;
 import org.bukkit.entity.ItemFrame;
@@ -52,8 +50,8 @@ public final class EntityListener implements Listener {
         if (player == null) {
             return; // mob, explosion or dispenser: nobody to hold responsible
         }
-        BlockPos pos = HangingSnapshot.blockPosOf(hanging);
-        if (!plugin.registry().isHoneypot(pos)) {
+        HangingSnapshot snapshot = HangingSnapshot.of(hanging);
+        if (!plugin.registry().covers(snapshot)) {
             return;
         }
         if (player.hasPermission("honeypot.break")) {
@@ -61,26 +59,10 @@ public final class EntityListener implements Listener {
             // remove — the position stays marked for whoever comes next.
             return;
         }
-        HoneypotConfig config = plugin.settings();
-        HangingSnapshot snapshot = HangingSnapshot.of(hanging);
         int total = plugin.tracker().recordHangingBreak(player.getUniqueId(), snapshot,
-                config.pointsFor(snapshot.material()));
-        plugin.logAlert(player.getName() + " broke honeypot " + snapshot.describe()
-                + " at " + pos.serialize() + " (" + total + "/" + config.offensePoints() + " points)");
-        if (config.discordNotify()) {
-            plugin.notifyDiscord(config.discordBreakMessage()
-                    .replace("<player>", player.getName())
-                    .replace("<block>", snapshot.material().name()));
-        }
-        if (config.offensePoints() > 0 && total < config.offensePoints()) {
-            return; // below threshold: the loss stands until rollback
-        }
-        OffenseTracker.Result rolledBack = plugin.tracker().rollback(player.getUniqueId());
-        event.setCancelled(true);
-        plugin.punisher().punish(player);
-        plugin.logEvent("Rolled back " + rolledBack.describe() + " by " + player.getName() + ".");
-        plugin.logAlert("Caught " + player.getName() + " (action: "
-                + config.action().name().toLowerCase(Locale.ROOT) + ", " + total + " points)");
+                plugin.settings().pointsFor(snapshot.material()));
+        plugin.alertOffense(player, snapshot.describe(), snapshot.pos(), snapshot.material(), total);
+        plugin.punishIfTripped(player, total, event);
     }
 
     /** The player behind the damage, directly or through something they shot. */

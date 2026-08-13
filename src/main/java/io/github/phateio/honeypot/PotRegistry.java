@@ -49,6 +49,41 @@ public final class PotRegistry {
         return false;
     }
 
+    /** True when any block the hanging occupies is marked. */
+    public boolean covers(HangingSnapshot hanging) {
+        for (BlockPos pos : hanging.covered()) {
+            if (isHoneypot(pos)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Cheap pre-filter for the hanging scan in {@link BlockListener}: true when
+     * any marked position lies within {@code radius} blocks. Block breaks are
+     * frequent and looking up nearby entities is not free, so this keeps that
+     * lookup off the common path of someone mining far from any honeypot.
+     */
+    public boolean hasMarkWithin(BlockPos pos, int radius) {
+        for (Pot pot : pots.values()) {
+            for (BlockPos block : pot.blocks()) {
+                if (block.world().equals(pos.world())
+                        && Math.abs(block.x() - pos.x()) <= radius
+                        && Math.abs(block.y() - pos.y()) <= radius
+                        && Math.abs(block.z() - pos.z()) <= radius) {
+                    return true;
+                }
+            }
+            for (Region region : pot.regions()) {
+                if (region.within(pos, radius)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private Pot potFor(String name) {
         return pots.computeIfAbsent(name, Pot::new);
     }

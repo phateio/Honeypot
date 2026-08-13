@@ -1,6 +1,7 @@
 package io.github.phateio.honeypot;
 
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
 
 /**
  * A block position keyed by world <em>name</em> rather than a live World
@@ -11,6 +12,11 @@ public record BlockPos(String world, int x, int y, int z) {
 
     public static BlockPos of(Block block) {
         return new BlockPos(block.getWorld().getName(), block.getX(), block.getY(), block.getZ());
+    }
+
+    /** The neighbouring position one step along {@code face}. */
+    public BlockPos relative(BlockFace face) {
+        return new BlockPos(world, x + face.getModX(), y + face.getModY(), z + face.getModZ());
     }
 
     /** Serialized form used in honeypots.yml: {@code world,x,y,z}. */

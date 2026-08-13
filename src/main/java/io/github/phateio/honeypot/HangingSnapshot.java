@@ -1,5 +1,8 @@
 package io.github.phateio.honeypot;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.bukkit.Art;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
@@ -37,15 +40,32 @@ public record HangingSnapshot(
         boolean fixed,
         boolean invulnerable) {
 
+    /** How far a hanging's position sits from its block centre, toward its support. */
+    private static final double WALL_OFFSET = 0.46875;
+    /** Widest and tallest vanilla art, so nothing reaches further than this. */
+    public static final int MAX_SPAN = 4;
+
     /**
-     * The block a hanging occupies. Its entity position is offset 0.46875 toward
-     * the block it hangs on, so flooring the location always lands back on the
-     * hanging's own block.
+     * The block a hanging is anchored to — {@code block_pos} in its NBT.
+     *
+     * <p>A hanging's position is not its block centre. It sits {@value
+     * #WALL_OFFSET} toward the block it hangs on, and a painting whose width or
+     * height is even is shifted a further half block along the wall and in Y.
+     * Flooring the location therefore lands one block off for most vanilla arts,
+     * so the offsets are undone here instead. Measured against Paper 26.2 for all
+     * six item-frame facings and for 1x1 / 2x1 / 1x2 / 2x2 / 4x2 / 4x3 paintings
+     * on both horizontal axes.
      */
     public static BlockPos blockPosOf(Hanging hanging) {
         Location location = hanging.getLocation();
+        BlockFace facing = hanging.getFacing();
+        BlockFace across = counterClockWise(facing);
+        double alongWall = evenOffset(widthOf(hanging));
+        double x = location.getX() + facing.getModX() * WALL_OFFSET - alongWall * across.getModX();
+        double y = location.getY() + facing.getModY() * WALL_OFFSET - evenOffset(heightOf(hanging));
+        double z = location.getZ() + facing.getModZ() * WALL_OFFSET - alongWall * across.getModZ();
         return new BlockPos(location.getWorld().getName(),
-                location.getBlockX(), location.getBlockY(), location.getBlockZ());
+                (int) Math.floor(x), (int) Math.floor(y), (int) Math.floor(z));
     }
 
     public static HangingSnapshot of(Hanging hanging) {
@@ -65,6 +85,46 @@ public record HangingSnapshot(
         }
         return new HangingSnapshot(blockPosOf(hanging), hanging.getType(), hanging.getFacing(),
                 item, rotation, art, visible, fixed, hanging.isInvulnerable());
+    }
+
+    /**
+     * Every block this hanging occupies. A honeypot covers the hanging when any
+     * of them is marked, so a painting is caught wherever it happens to be
+     * marked rather than only on its anchor block.
+     */
+    public List<BlockPos> covered() {
+        int width = blockWidth();
+        int height = blockHeight();
+        if (width == 1 && height == 1) {
+            return List.of(pos);
+        }
+        // A run of `size` blocks centred on the anchor the way vanilla centres
+        // the art: an even size extends one further in the positive direction.
+        BlockFace across = counterClockWise(facing);
+        int firstAcross = -((width - 1) / 2);
+        int firstUp = -((height - 1) / 2);
+        List<BlockPos> out = new ArrayList<>(width * height);
+        for (int i = 0; i < width; i++) {
+            int step = firstAcross + i;
+            for (int j = 0; j < height; j++) {
+                out.add(new BlockPos(pos.world(),
+                        pos.x() + across.getModX() * step,
+                        pos.y() + firstUp + j,
+                        pos.z() + across.getModZ() * step));
+            }
+        }
+        return out;
+    }
+
+    /** True when this hanging rests on {@code block}, so a break there drops it. */
+    public boolean hangsOn(BlockPos block) {
+        BlockFace support = facing.getOppositeFace();
+        for (BlockPos covered : covered()) {
+            if (covered.relative(support).equals(block)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -112,10 +172,12 @@ public record HangingSnapshot(
 
     /**
      * The hanging that is still there — the frame survives when only its item was
-     * taken, and a rollback must not stack a second frame on top of it.
+     * taken, and a rollback must not stack a second one on top of it. A large
+     * painting's position sits well away from its anchor, so the search covers
+     * the largest art and every candidate is matched on its own anchor.
      */
     private Hanging findExisting(World world, Location location) {
-        for (Entity entity : world.getNearbyEntities(location, 0.5, 0.5, 0.5)) {
+        for (Entity entity : world.getNearbyEntities(location, MAX_SPAN, MAX_SPAN, MAX_SPAN)) {
             if (entity instanceof Hanging hanging
                     && hanging.getType() == type
                     && hanging.getFacing() == facing
@@ -151,7 +213,12 @@ public record HangingSnapshot(
     private void apply(Hanging hanging) {
         hanging.setInvulnerable(invulnerable);
         if (hanging instanceof ItemFrame frame) {
-            frame.setItem(item, false);
+            // Only ever put something back, never clear: rollback is per player,
+            // so an empty snapshot must not wipe an item that another player's
+            // rollback already restored into this same frame.
+            if (item != null) {
+                frame.setItem(item, false);
+            }
             if (rotation != null) {
                 frame.setRotation(rotation);
             }
@@ -160,5 +227,37 @@ public record HangingSnapshot(
         } else if (hanging instanceof Painting painting && art != null) {
             painting.setArt(art, true);
         }
+    }
+
+    private int blockWidth() {
+        return art == null ? 1 : art.getBlockWidth();
+    }
+
+    private int blockHeight() {
+        return art == null ? 1 : art.getBlockHeight();
+    }
+
+    private static int widthOf(Hanging hanging) {
+        return hanging instanceof Painting painting ? painting.getArt().getBlockWidth() : 1;
+    }
+
+    private static int heightOf(Hanging hanging) {
+        return hanging instanceof Painting painting ? painting.getArt().getBlockHeight() : 1;
+    }
+
+    private static double evenOffset(int size) {
+        return size % 2 == 0 ? 0.5 : 0.0;
+    }
+
+    /** Matches vanilla {@code Direction#getCounterClockWise()} for the horizontal faces. */
+    private static BlockFace counterClockWise(BlockFace facing) {
+        return switch (facing) {
+            case NORTH -> BlockFace.WEST;
+            case WEST -> BlockFace.SOUTH;
+            case SOUTH -> BlockFace.EAST;
+            case EAST -> BlockFace.NORTH;
+            // UP/DOWN carry item frames only, which are 1x1, so the offset is zero.
+            default -> BlockFace.SELF;
+        };
     }
 }
