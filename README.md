@@ -58,13 +58,19 @@ code from the original project.
 | `/hp reload` | Reload config and honeypot data. |
 
 Marks made without an active honeypot go into a pot named `default`. Individual
-marks are removed by breaking the block while holding the `honeypot.break`
-permission (which also makes you immune to honeypots).
+marks are removed by destroying whatever carries them while holding the
+`honeypot.break` permission (which also makes you immune to honeypots) — the
+block for a block mark, the hanging itself for a hanging mark.
 
 A hanging has to be marked by right-clicking the hanging itself. Its position is
 an air block that the hanging covers, so clicking "it" as a block is not
 possible, and `/hp pos1|pos2` without coordinates raytraces blocks and returns
 the wall behind — marking that protects the wall, not the frame in front of it.
+Unmarking is asymmetric the same way: breaking the wall behind a marked frame
+drops the frame but leaves the mark, since the mark is on the air position the
+frame occupied. Break the hanging — and note a frame still holding something
+takes two hits, because the first only takes the item out and deliberately
+leaves the mark alone.
 
 ## Permissions
 
