@@ -3,6 +3,7 @@ package io.github.phateio.honeypot;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Hanging;
 import org.bukkit.entity.ItemFrame;
+import org.bukkit.entity.Painting;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.Cancellable;
@@ -49,6 +50,13 @@ public final class EntityListener implements Listener {
     private void handle(Player player, Hanging hanging, Cancellable event) {
         if (player == null) {
             return; // mob, explosion or dispenser: nobody to hold responsible
+        }
+        if (!(hanging instanceof ItemFrame) && !(hanging instanceof Painting)) {
+            // LeashHitch is a Hanging too and reaches this event, but it resolves
+            // to the fence it is tied to — which may well be marked as a frame's
+            // support — and this class can neither score nor restore one. Untying
+            // a horse must never read as griefing.
+            return;
         }
         HangingSnapshot snapshot = HangingSnapshot.of(hanging);
         if (!plugin.registry().covers(snapshot)) {

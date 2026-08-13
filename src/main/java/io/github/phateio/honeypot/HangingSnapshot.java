@@ -158,6 +158,13 @@ public record HangingSnapshot(
         if (world == null) {
             return false;
         }
+        // getNearbyEntities walks loaded chunks only and never loads one, so an
+        // unloaded chunk would hide a hanging that is still there and spawn a
+        // duplicate on top of it. The offline sweep reaches exactly that state:
+        // stolen item, no block records to pull the chunk in, nobody nearby.
+        for (BlockPos covered : covered()) {
+            world.getChunkAt(covered.x() >> 4, covered.z() >> 4);
+        }
         Location location = new Location(world, pos.x() + 0.5, pos.y() + 0.5, pos.z() + 0.5);
         Hanging hanging = findExisting(world, location);
         if (hanging == null) {
