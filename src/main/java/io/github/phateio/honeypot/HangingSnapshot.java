@@ -189,6 +189,18 @@ public record HangingSnapshot(
     }
 
     private Hanging spawn(World world, Location location) {
+        // Paper does not refuse to place a hanging that has nothing behind it:
+        // since SPIGOT-6387 it falls back to a default face and leaves it in
+        // midair, and vanilla then discards it a few seconds later and spills
+        // whatever it held. Check the support up front so a rollback reports the
+        // failure instead of logging a success the world quietly undoes.
+        BlockFace support = facing.getOppositeFace();
+        for (BlockPos covered : covered()) {
+            BlockPos behind = covered.relative(support);
+            if (!world.getBlockAt(behind.x(), behind.y(), behind.z()).getType().isSolid()) {
+                return null;
+            }
+        }
         try {
             return switch (type) {
                 case ITEM_FRAME -> world.spawn(location, ItemFrame.class, this::prepare);
@@ -215,12 +227,15 @@ public record HangingSnapshot(
         if (hanging instanceof ItemFrame frame) {
             // Only ever put something back, never clear: rollback is per player,
             // so an empty snapshot must not wipe an item that another player's
-            // rollback already restored into this same frame.
+            // rollback already restored into this same frame. Rotation goes with
+            // the item — vanilla resets it when the item comes out, so applying
+            // it from an empty snapshot would leave a restored map facing the
+            // wrong way.
             if (item != null) {
                 frame.setItem(item, false);
-            }
-            if (rotation != null) {
-                frame.setRotation(rotation);
+                if (rotation != null) {
+                    frame.setRotation(rotation);
+                }
             }
             frame.setVisible(visible);
             frame.setFixed(fixed);
