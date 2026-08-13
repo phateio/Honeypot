@@ -72,6 +72,25 @@ public final class OffenseTracker {
                 .putIfAbsent(snapshot.key(), snapshot);
     }
 
+    /**
+     * True when this player has an outstanding hanging snapshot that rested on
+     * {@code block}. The hanging is already gone, so a scan of the world cannot
+     * find it, but its snapshot still needs this block back before it can be
+     * restored onto it.
+     */
+    public boolean hasHangingRestingOn(UUID player, BlockPos block) {
+        Map<HangingSnapshot.Key, HangingSnapshot> hangings = brokenHangings.get(player);
+        if (hangings == null) {
+            return false;
+        }
+        for (HangingSnapshot snapshot : hangings.values()) {
+            if (snapshot.hangsOn(block)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public void recordPlace(UUID player, BlockPos pos) {
         placedBlocks.computeIfAbsent(player, k -> new HashSet<>()).add(pos);
     }

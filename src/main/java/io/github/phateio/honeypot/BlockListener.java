@@ -39,12 +39,20 @@ public final class BlockListener implements Listener {
         for (HangingSnapshot hanging : restingOn(block)) {
             (registry.covers(hanging) ? scored : collateral).add(hanging);
         }
+        Player player = event.getPlayer();
         boolean marked = registry.isHoneypot(pos);
-        if (!marked && scored.isEmpty()) {
+        boolean offense = marked || !scored.isEmpty();
+        // A hanging this player already took down may have rested here. It is
+        // gone, so restingOn cannot see it, but its snapshot still needs this
+        // block back or the restore finds air and fails: breaking the frame and
+        // then its wall must not escape the rollback that breaking the wall
+        // alone survives, and that is the order someone actually works in.
+        boolean carriesPendingHanging = !offense
+                && plugin.tracker().hasHangingRestingOn(player.getUniqueId(), pos);
+        if (!offense && !carriesPendingHanging) {
             return;
         }
 
-        Player player = event.getPlayer();
         if (player.hasPermission("honeypot.break")) {
             // Immune; breaking an individually marked block removes the mark.
             // Blocks only covered by a region break normally (regions are
@@ -84,7 +92,12 @@ public final class BlockListener implements Listener {
                     config.pointsFor(hanging.material()));
             plugin.alertOffense(player, hanging.describe(), hanging.pos(), hanging.material(), total);
         }
-        plugin.punishIfTripped(player, total, event);
+        if (offense) {
+            // Recording a support block nobody was punished for is not itself an
+            // offense, and with offense-points at 0 a zero total would otherwise
+            // punish someone for an ordinary block break.
+            plugin.punishIfTripped(player, total, event);
+        }
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
