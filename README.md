@@ -39,8 +39,10 @@ code from the original project.
     hanging on a marked block earns no points of its own but still comes back.
 
   They score as `ITEM_FRAME` / `GLOW_ITEM_FRAME` / `PAINTING` in
-  `offense-point-map`, so a map wall can be weighted far above the blocks around
-  it.
+  `offense-point-map`, shipped at 5 like the other display materials, so a map
+  wall trips after a handful of thefts rather than the 32 an unlisted material
+  would take. Existing installs keep their own `config.yml` — add the three
+  entries to weight hangings there.
 
 ## Commands
 
