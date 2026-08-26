@@ -76,7 +76,7 @@ public record HoneypotConfig(
                 config.getBoolean("discord-notify", true),
                 config.getString("discord-channel", "global"),
                 config.getString("discord-break-message",
-                        ":honey_pot: **<player>** broke honeypot block <block>"),
+                        ":pick: **<player>** broke honeypot block <block>"),
                 config.getString("discord-caught-message",
                         ":boot: **<player>** was caught breaking a honeypot block."));
     }

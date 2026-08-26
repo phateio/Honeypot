@@ -103,7 +103,7 @@ Configured in `config.yml`:
 |-----|---------|--------|
 | `discord-notify` | `true` | Master switch for both alerts. |
 | `discord-channel` | `global` | A DiscordSRV **Channels** name (from DiscordSRV's own config), not a raw channel ID. |
-| `discord-break-message` | `:honey_pot: **<player>** broke honeypot block <block>` | Sent on every break. |
+| `discord-break-message` | `:pick: **<player>** broke honeypot block <block>` | Sent on every break. |
 | `discord-caught-message` | `:boot: **<player>** was caught breaking a honeypot block.` | Sent when the player trips the honeypot. |
 
 Messages are plain Discord markdown; `<player>` and `<block>` are substituted

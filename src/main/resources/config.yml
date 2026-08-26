@@ -14,7 +14,7 @@ broadcast-message: '<dark_red>[Honeypot]<gray> Player <dark_red><player><gray> w
 # Kept terse on purpose — this is a public channel, so no coordinates or points.
 discord-notify: true
 discord-channel: global
-discord-break-message: ':honey_pot: **<player>** broke honeypot block <block>'
+discord-break-message: ':pick: **<player>** broke honeypot block <block>'
 discord-caught-message: ':boot: **<player>** was caught breaking a honeypot block.'
 
 # Non-empty lists override the built-in ban/kick API with console commands.
