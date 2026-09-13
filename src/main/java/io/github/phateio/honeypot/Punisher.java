@@ -21,6 +21,15 @@ public final class Punisher {
 
     public void punish(Player player) {
         HoneypotConfig config = plugin.settings();
+        // Alert Discord BEFORE punishing. A ban-commands entry routed through a ban
+        // alias announces itself, so punishing first would put that announcement
+        // ahead of ours and read backwards; and a punishment that throws would
+        // swallow the alert entirely. The send is asynchronous, so this costs the
+        // punishment nothing. The in-game broadcast stays after the punishment, as
+        // before, so the offender is already gone when it goes out.
+        if (config.discordNotify()) {
+            plugin.notifyDiscord(config.discordCaughtMessage().replace("<player>", player.getName()));
+        }
         switch (config.action()) {
             case BAN -> {
                 if (config.banCommands().isEmpty()) {
@@ -41,9 +50,6 @@ public final class Punisher {
         if (config.broadcast()) {
             Bukkit.broadcast(MiniMessage.miniMessage().deserialize(config.broadcastMessage(),
                     Placeholder.unparsed("player", player.getName())));
-        }
-        if (config.discordNotify()) {
-            plugin.notifyDiscord(config.discordCaughtMessage().replace("<player>", player.getName()));
         }
     }
 
